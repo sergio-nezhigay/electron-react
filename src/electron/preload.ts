@@ -14,6 +14,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return 'Failed to send message';
     }
   },
+  longProcess: async () => {
+    try {
+      return await ipcRenderer.invoke('long-process');
+    } catch (error) {
+      console.error('Failed to execute long process:', error);
+      return 'Process failed';
+    }
+  },
 });
 
 // Type declarations for TypeScript
@@ -26,6 +34,7 @@ declare global {
         electron: () => string;
       };
       sayHello: (name: string) => Promise<string>;
+      longProcess: () => Promise<string>;
     };
   }
 }

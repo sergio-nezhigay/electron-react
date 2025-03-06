@@ -1,9 +1,27 @@
 import { createRoot } from 'react-dom/client';
 import * as React from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Paper,
+  CircularProgress,
+  Stack,
+} from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+  },
+});
 
 const App: React.FC = () => {
   const [message, setMessage] = React.useState<string>('');
   const [versions, setVersions] = React.useState<string>('');
+  const [processStatus, setProcessStatus] = React.useState<string>('');
+  const [isProcessing, setIsProcessing] = React.useState(false);
 
   React.useEffect(() => {
     // Display versions info when component mounts
@@ -19,25 +37,66 @@ const App: React.FC = () => {
     setMessage(response);
   };
 
+  const handleLongProcess = async () => {
+    setIsProcessing(true);
+    setProcessStatus('Processing...');
+    const result = await window.electronAPI.longProcess();
+    setProcessStatus(result);
+    setIsProcessing(false);
+  };
+
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Electron + React App</h1>
+    <ThemeProvider theme={theme}>
+      <Container maxWidth='sm'>
+        <Box sx={{ my: 4 }}>
+          <Typography variant='h3' component='h1' gutterBottom>
+            Electron + React App
+          </Typography>
 
-      <div>
-        <h2>Versions:</h2>
-        <p>{versions}</p>
-      </div>
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant='h6' gutterBottom>
+              Versions
+            </Typography>
+            <Typography variant='body1'>{versions}</Typography>
+          </Paper>
 
-      <div>
-        <button onClick={handleSayHello}>Say Hello</button>
-        {message && <p>{message}</p>}
-      </div>
-    </div>
+          <Stack spacing={2}>
+            <Paper sx={{ p: 2 }}>
+              <Stack spacing={2}>
+                <Button variant='contained' onClick={handleSayHello}>
+                  Say Hello
+                </Button>
+                {message && <Typography variant='body1'>{message}</Typography>}
+              </Stack>
+            </Paper>
+
+            <Paper sx={{ p: 2 }}>
+              <Stack spacing={2}>
+                <Button
+                  variant='contained'
+                  onClick={handleLongProcess}
+                  disabled={isProcessing}
+                  startIcon={
+                    isProcessing && (
+                      <CircularProgress size={20} color='inherit' />
+                    )
+                  }
+                >
+                  {isProcessing ? 'Processing...' : 'Start Long Process'}
+                </Button>
+                {processStatus && (
+                  <Typography variant='body1'>{processStatus}</Typography>
+                )}
+              </Stack>
+            </Paper>
+          </Stack>
+        </Box>
+      </Container>
+    </ThemeProvider>
   );
 };
 
 export default App;
 
 const root = createRoot(document.body);
-
 root.render(<App />);
