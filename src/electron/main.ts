@@ -1,22 +1,11 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
+import { registerIpcHandlers } from './ipcHandlers';
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
-
-const registerIpcChannels = (): void => {
-  ipcMain.handle('say-hello', async (event, name) => {
-    return `Hello, ${name}!`;
-  });
-
-  ipcMain.handle('long-process', async () => {
-    // Simulate a long process
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    return 'Process completed successfully after 5 seconds!';
-  });
-};
 
 const createWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -32,7 +21,7 @@ const createWindow = (): void => {
 };
 
 app.on('ready', () => {
-  registerIpcChannels();
+  registerIpcHandlers();
   createWindow();
 });
 
