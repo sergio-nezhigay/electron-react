@@ -7,6 +7,7 @@ import {
   Button,
   Paper,
   CircularProgress,
+  LinearProgress,
   Stack,
 } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -22,6 +23,7 @@ const App: React.FC = () => {
   const [versions, setVersions] = React.useState<string>('');
   const [processStatus, setProcessStatus] = React.useState<string>('');
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [progress, setProgress] = React.useState<number>(0);
 
   React.useEffect(() => {
     // Display versions info when component mounts
@@ -30,6 +32,10 @@ const App: React.FC = () => {
       `Chrome: ${window.electronAPI.versions.chrome()}, ` +
       `Electron: ${window.electronAPI.versions.electron()}`;
     setVersions(versionsText);
+
+    window.electronAPI.onLongProcessProgress((progress) => {
+      setProgress(progress);
+    });
   }, []);
 
   const handleSayHello = async () => {
@@ -40,6 +46,7 @@ const App: React.FC = () => {
   const handleLongProcess = async () => {
     setIsProcessing(true);
     setProcessStatus('Processing...');
+    setProgress(0);
     const result = await window.electronAPI.longProcess();
     setProcessStatus(result);
     setIsProcessing(false);
@@ -84,6 +91,9 @@ const App: React.FC = () => {
                 >
                   {isProcessing ? 'Processing...' : 'Start Long Process'}
                 </Button>
+                {isProcessing && (
+                  <LinearProgress variant='determinate' value={progress} />
+                )}
                 {processStatus && (
                   <Typography variant='body1'>{processStatus}</Typography>
                 )}

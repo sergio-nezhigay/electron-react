@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return 'Process failed';
     }
   },
+  onLongProcessProgress: (callback: (progress: number) => void) => {
+    ipcRenderer.on('long-process-progress', (event, progress) => {
+      callback(progress);
+    });
+  },
 });
 
 // Type declarations for TypeScript
@@ -35,6 +40,7 @@ declare global {
       };
       sayHello: (name: string) => Promise<string>;
       longProcess: () => Promise<string>;
+      onLongProcessProgress: (callback: (progress: number) => void) => void;
     };
   }
 }
