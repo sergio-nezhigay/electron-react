@@ -48,6 +48,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.7",
     "@mui/material": "^6.4.7",
+    "dotenv": "^16.4.7",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

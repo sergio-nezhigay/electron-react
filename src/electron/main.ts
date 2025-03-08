@@ -1,5 +1,9 @@
 import { app, BrowserWindow } from 'electron';
 import { registerIpcHandlers } from './ipcHandlers';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 

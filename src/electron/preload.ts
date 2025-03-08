@@ -2,11 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   versions: {
-    node: () => process.versions.node,
-    chrome: () => process.versions.chrome,
-    electron: () => process.versions.electron,
+    node: (): string => process.versions.node,
+    chrome: (): string => process.versions.chrome,
+    electron: (): string => process.versions.electron,
   },
-  sayHello: async (name: string) => {
+  sayHello: async (name: string): Promise<string> => {
     try {
       return await ipcRenderer.invoke('say-hello', name);
     } catch (error) {
@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return 'Failed to send message';
     }
   },
-  longProcess: async () => {
+  longProcess: async (): Promise<string> => {
     try {
       return await ipcRenderer.invoke('long-process');
     } catch (error) {
@@ -22,14 +22,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return 'Process failed';
     }
   },
-  onLongProcessProgress: (callback: (progress: number) => void) => {
-    ipcRenderer.on('long-process-progress', (event, progress) => {
-      callback(progress);
-    });
-  },
 });
 
-// Type declarations for TypeScript
 declare global {
   interface Window {
     electronAPI: {
@@ -40,7 +34,6 @@ declare global {
       };
       sayHello: (name: string) => Promise<string>;
       longProcess: () => Promise<string>;
-      onLongProcessProgress: (callback: (progress: number) => void) => void;
     };
   }
 }
