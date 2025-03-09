@@ -29,7 +29,7 @@ const App: React.FC = () => {
       `Chrome: ${window.electronAPI.versions.chrome()}, ` +
       `Electron: ${window.electronAPI.versions.electron()}`;
     setVersions(versionsText);
-    handleLongProcess(); //temp
+    //handleLongProcess(); //temp
   }, []);
 
   const handleSayHello = async () => {

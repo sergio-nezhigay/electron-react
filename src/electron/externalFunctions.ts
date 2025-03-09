@@ -166,8 +166,8 @@ export const fetchShopifyProducts = async (): Promise<ShopifyProduct[]> => {
       );
       allProducts.push(...extractProducts(data));
       console.log(`Fetched ${allProducts.length} products from Shopify`);
-      hasNextPage = false; //temp for debugging speed
-      //  hasNextPage = data.data?.products.pageInfo.hasNextPage || false;
+      //  hasNextPage = false; //temp for debugging speed
+      hasNextPage = data.data?.products.pageInfo.hasNextPage || false;
       endCursor = data.data?.products.pageInfo.endCursor || null;
     } catch (error) {
       throw new Error(
@@ -189,6 +189,7 @@ interface SupplierProduct {
   warranty: string;
   instock: number;
   priceOpt: number;
+  supplierName?: string;
 }
 
 export const fetchChergProducts = async (): Promise<SupplierProduct[]> => {
@@ -269,4 +270,102 @@ export const fetchMezhigProducts = async (): Promise<SupplierProduct[]> => {
 
 const isPositiveDigit = (value: string): boolean => {
   return /^\d+$/.test(value);
+};
+
+interface ExtendedShopifyProduct extends ShopifyProduct {
+  suppliers: SupplierProduct[];
+  bestSupplier: SupplierProduct | null;
+  bestSupplierName: string | null;
+}
+
+export const mergeSupplierData = (
+  shopifyProducts: ShopifyProduct[],
+  supplier1Products: SupplierProduct[],
+  supplier2Products: SupplierProduct[]
+): ExtendedShopifyProduct[] => {
+  const allSupplierProducts = [
+    ...supplier1Products.map((product) => ({
+      ...product,
+      supplierName: 'Cherg',
+    })),
+    ...supplier2Products.map((product) => ({
+      ...product,
+      supplierName: 'Mezhig',
+    })),
+  ];
+
+  const extendedProducts: ExtendedShopifyProduct[] = shopifyProducts.map(
+    (product) => {
+      const suppliers = allSupplierProducts.filter(
+        (supplier) =>
+          supplier.part_number.toLowerCase() ===
+          product.part_number.toLowerCase()
+      );
+
+      const bestSupplier = suppliers.reduce((best, current) => {
+        if (
+          !best ||
+          (current.instock > 0 && current.priceOpt < best.priceOpt)
+        ) {
+          return current;
+        }
+        return best;
+      }, null as SupplierProduct | null);
+
+      return {
+        ...product,
+        suppliers,
+        bestSupplier,
+        bestSupplierName: bestSupplier ? bestSupplier.supplierName : null,
+      };
+    }
+  );
+
+  return extendedProducts;
+};
+
+export const writeExtendedProductsToFile = async (
+  extendedProducts: ExtendedShopifyProduct[],
+  filePath: string
+): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Extended Products');
+
+  worksheet.columns = [
+    { header: 'ID', key: 'id', width: 20 },
+    { header: 'Title', key: 'title', width: 30 },
+    { header: 'Handle', key: 'handle', width: 30 },
+    { header: 'Part Number', key: 'part_number', width: 20 },
+    { header: 'Custom Hotline Href', key: 'custom_hotline_href', width: 30 },
+    {
+      header: 'Custom Product Number 1 SKU',
+      key: 'custom_product_number_1_sku',
+      width: 30,
+    },
+    {
+      header: 'Custom Alternative Part Number',
+      key: 'custom_alternative_part_number',
+      width: 30,
+    },
+    { header: 'Best Supplier Name', key: 'bestSupplierName', width: 20 },
+    { header: 'Best Supplier Price', key: 'bestSupplierPrice', width: 20 },
+    { header: 'Best Supplier Stock', key: 'bestSupplierStock', width: 20 },
+  ];
+
+  extendedProducts.forEach((product) => {
+    worksheet.addRow({
+      id: product.id,
+      title: product.title,
+      handle: product.handle,
+      part_number: product.part_number,
+      custom_hotline_href: product.custom_hotline_href,
+      custom_product_number_1_sku: product.custom_product_number_1_sku,
+      custom_alternative_part_number: product.custom_alternative_part_number,
+      bestSupplierName: product.bestSupplierName,
+      bestSupplierPrice: product.bestSupplier?.priceOpt,
+      bestSupplierStock: product.bestSupplier?.instock,
+    });
+  });
+
+  await workbook.xlsx.writeFile(filePath);
 };
