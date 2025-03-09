@@ -9,9 +9,9 @@ interface ShopifyProduct {
   id: string;
   title: string;
   handle: string;
-  barcode: string;
+  part_number: string;
   custom_hotline_href: string;
-  custom_product_number_1: string;
+  custom_product_number_1_sku: string;
   custom_alternative_part_number: string;
 }
 
@@ -90,16 +90,17 @@ const extractProducts = (data: ShopifyResponse): ShopifyProduct[] => {
       id: edge.node.id,
       title: edge.node.title,
       handle: edge.node.handle,
-      barcode: edge.node.variants.edges[0]?.node.barcode || '',
+      part_number: edge.node.variants.edges[0]?.node.barcode || '',
       custom_hotline_href: edge.node.custom_hotline_href?.value || '',
-      custom_product_number_1: edge.node.custom_product_number_1?.value || '',
+      custom_product_number_1_sku:
+        edge.node.custom_product_number_1?.value || '',
       custom_alternative_part_number:
         edge.node.custom_alternative_part_number?.value || '',
     })) || []
   );
 };
 
-export const fetchShopifyProducts = async (): Promise<string> => {
+export const fetchShopifyProducts = async (): Promise<ShopifyProduct[]> => {
   const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
   const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
 
@@ -165,7 +166,7 @@ export const fetchShopifyProducts = async (): Promise<string> => {
       );
       allProducts.push(...extractProducts(data));
       console.log(`Fetched ${allProducts.length} products from Shopify`);
-      hasNextPage = false; //tmp
+      hasNextPage = false; //temp for debugging speed
       //  hasNextPage = data.data?.products.pageInfo.hasNextPage || false;
       endCursor = data.data?.products.pageInfo.endCursor || null;
     } catch (error) {
@@ -175,10 +176,14 @@ export const fetchShopifyProducts = async (): Promise<string> => {
     }
   }
 
-  return JSON.stringify(allProducts.length);
+  if (allProducts.length === 0) {
+    throw new Error('No products found from Shopify');
+  }
+
+  return allProducts;
 };
 
-interface Product {
+interface SupplierProduct {
   part_number: string;
   name: string;
   warranty: string;
@@ -186,35 +191,43 @@ interface Product {
   priceOpt: number;
 }
 
-export const asyncFunction2 = async (arg: string): Promise<string> => {
-  const serviceAccountAuth = new JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-  const documentId = process.env.CHERG_GOOGLE_SHEET_DOCUMENT_ID;
-  const doc = new GoogleSpreadsheet(documentId, serviceAccountAuth);
-  await doc.loadInfo();
-  const sheet = doc.sheetsById[35957627];
-  const rows = await sheet.getRows();
+export const fetchChergProducts = async (): Promise<SupplierProduct[]> => {
+  try {
+    const serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const documentId = process.env.CHERG_GOOGLE_SHEET_DOCUMENT_ID;
+    const doc = new GoogleSpreadsheet(documentId, serviceAccountAuth);
+    await doc.loadInfo();
+    const sheet = doc.sheetsById[35957627];
+    const rows = await sheet.getRows();
 
-  const filtered = rows.filter((row) => {
-    return row.get('Остаток') && isPositiveDigit(row.get('Остаток'));
-  });
+    const filtered = rows.filter((row) => {
+      return row.get('Остаток') && isPositiveDigit(row.get('Остаток'));
+    });
 
-  const out: Product[] = filtered.map((row) => ({
-    part_number: row.get('Модель').toLowerCase(),
-    name: row.get('Модель'),
-    warranty: '36',
-    instock: +row.get('Остаток') || 0,
-    priceOpt: +row.get('Цена'),
-  }));
+    const out: SupplierProduct[] = filtered.map((row) => ({
+      part_number: row.get('Модель').toLowerCase(),
+      name: row.get('Модель'),
+      warranty: '36',
+      instock: +row.get('Остаток') || 0,
+      priceOpt: +row.get('Цена'),
+    }));
 
-  return JSON.stringify(out) + ' ' + arg;
+    if (out.length < 50) {
+      throw new Error('Less than 50 products found from Cherg');
+    }
+
+    return out;
+  } catch (error) {
+    throw new Error(`Failed to fetch products from Cherg: ${error.message}`);
+  }
 };
 
-export const asyncFunction3 = async (): Promise<string> => {
-  console.log('~ asyncFunction3:');
+export const fetchMezhigProducts = async (): Promise<SupplierProduct[]> => {
+  console.log('~ fetchMezhigProducts:');
 
   try {
     const workbook = new ExcelJS.Workbook();
@@ -236,7 +249,7 @@ export const asyncFunction3 = async (): Promise<string> => {
     });
 
     const filtered = data.filter((product) => (product.priceOpt as number) > 0);
-    const result: Product[] = filtered.map((product) => ({
+    const result: SupplierProduct[] = filtered.map((product) => ({
       part_number: (product.part_number as string).toLowerCase(),
       name: product.name as string,
       warranty: product.warranty as string,
@@ -244,10 +257,13 @@ export const asyncFunction3 = async (): Promise<string> => {
       priceOpt: product.priceOpt as number,
     }));
 
-    return JSON.stringify(result);
+    if (result.length < 20) {
+      throw new Error('Less than 20 products found from Mezhig');
+    }
+
+    return result;
   } catch (err) {
-    console.error('❌ Error reading file:', err);
-    return 'Error reading file';
+    throw new Error(`Failed to fetch products from Mezhig: ${err.message}`);
   }
 };
 
