@@ -1,4 +1,9 @@
 import { net } from 'electron';
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { JWT } from 'google-auth-library';
+import path from 'path';
+
+import ExcelJS from 'exceljs';
 
 interface ShopifyProduct {
   id: string;
@@ -160,7 +165,8 @@ export const fetchShopifyProducts = async (): Promise<string> => {
       );
       allProducts.push(...extractProducts(data));
       console.log(`Fetched ${allProducts.length} products from Shopify`);
-      hasNextPage = data.data?.products.pageInfo.hasNextPage || false;
+      hasNextPage = false; //tmp
+      //  hasNextPage = data.data?.products.pageInfo.hasNextPage || false;
       endCursor = data.data?.products.pageInfo.endCursor || null;
     } catch (error) {
       throw new Error(
@@ -172,10 +178,79 @@ export const fetchShopifyProducts = async (): Promise<string> => {
   return JSON.stringify(allProducts.length);
 };
 
-export const asyncFunction2 = async (input: string): Promise<string> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(`Result from asyncFunction2 with input: ${input}`);
-    }, 1000);
+interface Product {
+  part_number: string;
+  name: string;
+  warranty: string;
+  instock: number;
+  priceOpt: number;
+}
+
+export const asyncFunction2 = async (arg: string): Promise<string> => {
+  const serviceAccountAuth = new JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
+  const documentId = process.env.CHERG_GOOGLE_SHEET_DOCUMENT_ID;
+  const doc = new GoogleSpreadsheet(documentId, serviceAccountAuth);
+  await doc.loadInfo();
+  const sheet = doc.sheetsById[35957627];
+  const rows = await sheet.getRows();
+
+  const filtered = rows.filter((row) => {
+    return row.get('Остаток') && isPositiveDigit(row.get('Остаток'));
+  });
+
+  const out: Product[] = filtered.map((row) => ({
+    part_number: row.get('Модель').toLowerCase(),
+    name: row.get('Модель'),
+    warranty: '36',
+    instock: +row.get('Остаток') || 0,
+    priceOpt: +row.get('Цена'),
+  }));
+
+  return JSON.stringify(out) + ' ' + arg;
+};
+
+export const asyncFunction3 = async (): Promise<string> => {
+  console.log('~ asyncFunction3:');
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(
+      path.join('/prices/межигорская', 'mezhigorska.xlsx')
+    );
+    const worksheet = workbook.worksheets[0];
+    const data: Record<string, unknown>[] = [];
+
+    worksheet.eachRow((row: ExcelJS.Row, rowNumber: number) => {
+      if (rowNumber > 1) {
+        const rowData: Record<string, unknown> = {};
+        row.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
+          const header = worksheet.getRow(1).getCell(colNumber).value as string;
+          rowData[header] = cell.value;
+        });
+        data.push(rowData);
+      }
+    });
+
+    const filtered = data.filter((product) => (product.priceOpt as number) > 0);
+    const result: Product[] = filtered.map((product) => ({
+      part_number: (product.part_number as string).toLowerCase(),
+      name: product.name as string,
+      warranty: product.warranty as string,
+      instock: product.instock as number,
+      priceOpt: product.priceOpt as number,
+    }));
+
+    return JSON.stringify(result);
+  } catch (err) {
+    console.error('❌ Error reading file:', err);
+    return 'Error reading file';
+  }
+};
+
+const isPositiveDigit = (value: string): boolean => {
+  return /^\d+$/.test(value);
 };

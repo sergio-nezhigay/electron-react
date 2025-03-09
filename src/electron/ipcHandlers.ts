@@ -1,5 +1,9 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { fetchShopifyProducts, asyncFunction2 } from './externalFunctions';
+import {
+  fetchShopifyProducts,
+  asyncFunction2,
+  asyncFunction3,
+} from './externalFunctions';
 
 export const registerIpcHandlers = (): void => {
   ipcMain.handle(
@@ -13,7 +17,8 @@ export const registerIpcHandlers = (): void => {
     try {
       const result1 = await fetchShopifyProducts();
       const result2 = await asyncFunction2(result1);
-      return `Process completed successfully! Result: ${result2}`;
+      const result3 = await asyncFunction3();
+      return `Process completed successfully! Result: ${result2}, ${result3}`;
     } catch (error) {
       return `Process failed: ${error.message}`;
     }
