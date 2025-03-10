@@ -53,6 +53,7 @@
     "exceljs": "^4.4.0",
     "google-auth-library": "^9.15.1",
     "google-spreadsheet": "^4.1.4",
+    "puppeteer": "^24.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }

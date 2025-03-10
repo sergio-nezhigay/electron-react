@@ -3,6 +3,7 @@ import {
   fetchShopifyProducts,
   fetchChergProducts,
   fetchMezhigProducts,
+  fetchRizhskaProducts,
   mergeSupplierData,
   writeExtendedProductsToFile,
   fetchAllSupplierProducts,
@@ -25,6 +26,7 @@ export const registerIpcHandlers = (): void => {
       const suppliers: Supplier[] = [
         { name: 'Cherg', fetchFunction: fetchChergProducts },
         { name: 'Mezhig', fetchFunction: fetchMezhigProducts },
+        { name: 'Rizhska', fetchFunction: fetchRizhskaProducts },
         // Add more suppliers here as needed
       ];
 
