@@ -5,6 +5,8 @@ import {
   fetchMezhigProducts,
   mergeSupplierData,
   writeExtendedProductsToFile,
+  fetchAllSupplierProducts,
+  Supplier,
 } from './externalFunctions';
 import path from 'path';
 
@@ -19,13 +21,18 @@ export const registerIpcHandlers = (): void => {
   ipcMain.handle('long-process', async (): Promise<string> => {
     try {
       const shopifyProducts = await fetchShopifyProducts();
-      const supplier1Products = await fetchChergProducts();
-      const supplier2Products = await fetchMezhigProducts();
+
+      const suppliers: Supplier[] = [
+        { name: 'Cherg', fetchFunction: fetchChergProducts },
+        { name: 'Mezhig', fetchFunction: fetchMezhigProducts },
+        // Add more suppliers here as needed
+      ];
+
+      const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
 
       const extendedProducts = mergeSupplierData(
         shopifyProducts,
-        supplier1Products,
-        supplier2Products
+        allSupplierProducts
       );
 
       const filePath = path.join(__dirname, 'extendedProducts.xlsx');

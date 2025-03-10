@@ -192,6 +192,11 @@ interface SupplierProduct {
   supplierName?: string;
 }
 
+export interface Supplier {
+  name: string;
+  fetchFunction: () => Promise<SupplierProduct[]>;
+}
+
 export const fetchChergProducts = async (): Promise<SupplierProduct[]> => {
   try {
     const serviceAccountAuth = new JWT({
@@ -268,6 +273,30 @@ export const fetchMezhigProducts = async (): Promise<SupplierProduct[]> => {
   }
 };
 
+export const fetchAllSupplierProducts = async (
+  suppliers: Supplier[]
+): Promise<SupplierProduct[]> => {
+  const allSupplierProducts: SupplierProduct[] = [];
+
+  for (const supplier of suppliers) {
+    try {
+      const products = await supplier.fetchFunction();
+      allSupplierProducts.push(
+        ...products.map((product) => ({
+          ...product,
+          supplierName: supplier.name,
+        }))
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to fetch products from ${supplier.name}: ${error.message}`
+      );
+    }
+  }
+
+  return allSupplierProducts;
+};
+
 const isPositiveDigit = (value: string): boolean => {
   return /^\d+$/.test(value);
 };
@@ -280,20 +309,8 @@ interface ExtendedShopifyProduct extends ShopifyProduct {
 
 export const mergeSupplierData = (
   shopifyProducts: ShopifyProduct[],
-  supplier1Products: SupplierProduct[],
-  supplier2Products: SupplierProduct[]
+  allSupplierProducts: SupplierProduct[]
 ): ExtendedShopifyProduct[] => {
-  const allSupplierProducts = [
-    ...supplier1Products.map((product) => ({
-      ...product,
-      supplierName: 'Cherg',
-    })),
-    ...supplier2Products.map((product) => ({
-      ...product,
-      supplierName: 'Mezhig',
-    })),
-  ];
-
   const extendedProducts: ExtendedShopifyProduct[] = shopifyProducts.map(
     (product) => {
       const suppliers = allSupplierProducts.filter(
@@ -303,10 +320,7 @@ export const mergeSupplierData = (
       );
 
       const bestSupplier = suppliers.reduce((best, current) => {
-        if (
-          !best ||
-          (current.instock > 0 && current.priceOpt < best.priceOpt)
-        ) {
+        if (!best || current.priceOpt < best.priceOpt) {
           return current;
         }
         return best;
