@@ -4,6 +4,7 @@ import {
   fetchChergProducts,
   fetchMezhigProducts,
   fetchRizhskaProducts,
+  fetchShchusevProducts,
   mergeSupplierData,
   writeExtendedProductsToFile,
   fetchAllSupplierProducts,
@@ -27,7 +28,7 @@ export const registerIpcHandlers = (): void => {
         { name: 'Cherg', fetchFunction: fetchChergProducts },
         { name: 'Mezhig', fetchFunction: fetchMezhigProducts },
         { name: 'Rizhska', fetchFunction: fetchRizhskaProducts },
-        // Add more suppliers here as needed
+        { name: 'Shchusev', fetchFunction: fetchShchusevProducts },
       ];
 
       const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
