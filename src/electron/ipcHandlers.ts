@@ -9,6 +9,7 @@ import {
   writeExtendedProductsToFile,
   fetchAllSupplierProducts,
   Supplier,
+  fetchBrnProducts,
 } from './externalFunctions';
 import path from 'path';
 
@@ -29,6 +30,7 @@ export const registerIpcHandlers = (): void => {
         { name: 'Mezhig', fetchFunction: fetchMezhigProducts },
         { name: 'Rizhska', fetchFunction: fetchRizhskaProducts },
         { name: 'Shchusev', fetchFunction: fetchShchusevProducts },
+        { name: 'Brn', fetchFunction: fetchBrnProducts },
       ];
 
       const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
