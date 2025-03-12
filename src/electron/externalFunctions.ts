@@ -5,6 +5,8 @@ import { JWT } from 'google-auth-library';
 import path from 'path';
 import puppeteer from 'puppeteer';
 
+import xml2js from 'xml2js';
+
 import ExcelJS from 'exceljs';
 
 interface ShopifyProduct {
@@ -57,6 +59,15 @@ interface PostData {
   variables: {
     first: number;
     after?: string | null;
+  };
+}
+
+interface Offer {
+  price?: string[];
+  name?: string[];
+  vendorCode?: string[];
+  $: {
+    available: string;
   };
 }
 
@@ -190,6 +201,7 @@ interface SupplierProduct {
   warranty: string;
   instock: number;
   priceOpt: number;
+  priceRtl?: number;
   supplierName?: string;
 }
 
@@ -475,9 +487,7 @@ export const fetchBrnProducts = async (): Promise<SupplierProduct[]> => {
     const authToken = authData.result;
 
     const priceUrl = `${priceUrlBase}${authToken}?lang=ru&full=1`;
-    const priceResponse = await net.fetch(priceUrl, {
-      //  headers: { SID: authToken },
-    });
+    const priceResponse = await net.fetch(priceUrl);
 
     if (!priceResponse.ok) {
       throw new Error(
@@ -522,9 +532,11 @@ export const fetchBrnProducts = async (): Promise<SupplierProduct[]> => {
           const article = row.getCell(headers['Article']).value as string;
           const name = row.getCell(headers['Name']).value as string;
           const warranty = row.getCell(headers['Warranty']).value as string;
-          const priceUSD = parseFloat(
-            row.getCell(headers['PriceUSD']).value as string
-          );
+          const priceUSD = row.getCell(headers['PriceUSD']).value as number;
+          const retailPrice = row.getCell(headers['RetailPrice'])
+            .value as number;
+
+          const minRecommendedPrice = Math.round(priceUSD * RATE * 1.08 + 30);
 
           products.push({
             part_number: article.toLowerCase(),
@@ -532,6 +544,7 @@ export const fetchBrnProducts = async (): Promise<SupplierProduct[]> => {
             warranty: warranty,
             instock: 10,
             priceOpt: priceUSD * RATE,
+            priceRtl: retailPrice > minRecommendedPrice ? retailPrice : 0,
           });
         }
       }
@@ -544,6 +557,100 @@ export const fetchBrnProducts = async (): Promise<SupplierProduct[]> => {
     return products;
   } catch (error) {
     throw new Error(`Failed to fetch products from Brn: ${error.message}`);
+  }
+};
+
+async function readXML(url: string): Promise<SupplierProduct[]> {
+  try {
+    const response = await net.fetch(url);
+    if (response.status !== 200) {
+      throw new Error(
+        `Failed to fetch XML: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const xmlContent = await response.text();
+    const parser = new xml2js.Parser();
+    const result = await parser.parseStringPromise(xmlContent);
+    const offers: Offer[] =
+      result.yml_catalog?.shop?.[0]?.offers?.[0]?.offer || [];
+
+    const mappedProducts: SupplierProduct[] = offers
+      .map((offer) => ({
+        part_number: offer.vendorCode?.[0] || '',
+        name: offer.name?.[0] || '',
+        warranty: '12',
+        instock: offer.$.available === 'true' ? 5 : 0,
+        priceOpt: offer.price?.[0] ? Number(offer.price[0]) : 0,
+      }))
+      .filter((product) => product.part_number && product.priceOpt > 0);
+
+    return mappedProducts;
+  } catch (error) {
+    console.error(`Error in readXML: ${error.message}`);
+    throw new Error(`Failed to read XML: ${error.message}`);
+  }
+}
+
+export const fetchEeeProducts = async (): Promise<SupplierProduct[]> => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(path.join('/prices/eee', 'eee.xlsx'));
+    const worksheet = workbook.worksheets[0];
+
+    const excelData: Record<string, unknown>[] = [];
+    worksheet.eachRow((row: ExcelJS.Row, rowNumber: number) => {
+      if (rowNumber > 1) {
+        const rowData: Record<string, unknown> = {};
+        row.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
+          const header = worksheet.getRow(1).getCell(colNumber).value as string;
+          rowData[header] = cell.value;
+        });
+        excelData.push(rowData);
+      }
+    });
+
+    const filteredExcelData = excelData
+      .filter((product) => (product.priceRtl as number) > 0)
+      .map((product) => ({
+        part_number: String(product.part_number || '').toLowerCase(),
+        priceOpt: product.priceOpt as number,
+        priceRtl: product.priceRtl as number,
+      }));
+
+    const xmlProducts = await readXML(process.env.EEE_XML_URL);
+
+    const result: SupplierProduct[] = xmlProducts.map((xmlProduct) => {
+      const matchingExcelProduct = filteredExcelData.find(
+        (excelProduct) =>
+          excelProduct.part_number.toLowerCase() ===
+          xmlProduct.part_number.toLowerCase()
+      );
+
+      return {
+        part_number: xmlProduct.part_number,
+        name: xmlProduct.name,
+        warranty: xmlProduct.warranty,
+        instock: xmlProduct.instock,
+        priceOpt: matchingExcelProduct
+          ? Number(matchingExcelProduct.priceOpt.toFixed(0))
+          : Number((xmlProduct.priceOpt - 30).toFixed(0)),
+        priceRtl: matchingExcelProduct
+          ? Number(matchingExcelProduct.priceRtl.toFixed(0))
+          : Number(((xmlProduct.priceOpt + 20) * 1.03).toFixed(0)),
+      };
+    });
+
+    if (result.length < 500) {
+      throw new Error(
+        'Less than 50 products found from Eee supplier after fallback'
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error in fetchEeeProducts:', error);
+    throw new Error(`Failed to fetch products from Eee: ${error.message}`);
   }
 };
 
@@ -624,9 +731,9 @@ export const writeExtendedProductsToFile = async (
   const worksheet = workbook.addWorksheet('Extended Products');
 
   worksheet.columns = [
-    { header: 'ID', key: 'id', width: 20 },
+    { header: 'ID', key: 'id', width: 10 },
     { header: 'Title', key: 'title', width: 30 },
-    { header: 'Handle', key: 'handle', width: 30 },
+    { header: 'Handle', key: 'handle', width: 10 },
     { header: 'Part Number', key: 'part_number', width: 20 },
     { header: 'Custom Hotline Href', key: 'custom_hotline_href', width: 30 },
     {
@@ -640,7 +747,8 @@ export const writeExtendedProductsToFile = async (
       width: 30,
     },
     { header: 'Best Supplier Name', key: 'bestSupplierName', width: 20 },
-    { header: 'Best Supplier Price', key: 'bestSupplierPrice', width: 20 },
+    { header: 'Supplier Opt Price', key: 'bestSupplierOptPrice', width: 15 },
+    { header: 'Supplier Rtl Price', key: 'bestSupplierRtlPrice', width: 15 },
     { header: 'Best Supplier Stock', key: 'bestSupplierStock', width: 20 },
   ];
 
@@ -654,7 +762,8 @@ export const writeExtendedProductsToFile = async (
       custom_product_number_1_sku: product.custom_product_number_1_sku,
       custom_alternative_part_number: product.custom_alternative_part_number,
       bestSupplierName: product.bestSupplierName,
-      bestSupplierPrice: product.bestSupplier?.priceOpt,
+      bestSupplierOptPrice: product.bestSupplier?.priceOpt,
+      bestSupplierRtlPrice: product.bestSupplier?.priceRtl,
       bestSupplierStock: product.bestSupplier?.instock,
     });
   });

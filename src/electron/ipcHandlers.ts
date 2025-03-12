@@ -12,6 +12,7 @@ import {
   fetchBrnProducts,
   fetchBgdnProducts,
   ExtendedShopifyProduct,
+  fetchEeeProducts,
   //  ExtendedShopifyProduct,
 } from './externalFunctions';
 import path from 'path';
@@ -35,6 +36,7 @@ export const registerIpcHandlers = (): void => {
         { name: 'Shchusev', fetchFunction: fetchShchusevProducts },
         { name: 'Brn', fetchFunction: fetchBrnProducts },
         { name: 'Bgdn', fetchFunction: fetchBgdnProducts },
+        { name: 'Eee', fetchFunction: fetchEeeProducts },
       ];
 
       const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
