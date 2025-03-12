@@ -10,6 +10,9 @@ import {
   fetchAllSupplierProducts,
   Supplier,
   fetchBrnProducts,
+  fetchBgdnProducts,
+  ExtendedShopifyProduct,
+  //  ExtendedShopifyProduct,
 } from './externalFunctions';
 import path from 'path';
 
@@ -31,6 +34,7 @@ export const registerIpcHandlers = (): void => {
         { name: 'Rizhska', fetchFunction: fetchRizhskaProducts },
         { name: 'Shchusev', fetchFunction: fetchShchusevProducts },
         { name: 'Brn', fetchFunction: fetchBrnProducts },
+        { name: 'Bgdn', fetchFunction: fetchBgdnProducts },
       ];
 
       const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
@@ -39,6 +43,8 @@ export const registerIpcHandlers = (): void => {
         shopifyProducts,
         allSupplierProducts
       );
+
+      logMergedProductsStats(extendedProducts);
 
       const filePath = path.join(__dirname, 'extendedProducts.xlsx');
       await writeExtendedProductsToFile(extendedProducts, filePath);
@@ -49,3 +55,23 @@ export const registerIpcHandlers = (): void => {
     }
   });
 };
+
+function logMergedProductsStats(
+  extendedProducts: ExtendedShopifyProduct[]
+): void {
+  const supplierStats: Record<string, number> = {};
+
+  extendedProducts.forEach((product) => {
+    const supplierName = product.bestSupplierName;
+    if (!supplierStats[supplierName]) {
+      supplierStats[supplierName] = 0;
+    }
+
+    supplierStats[supplierName] += 1;
+  });
+
+  console.log(`Merged Products: ${extendedProducts.length} total products`);
+  Object.entries(supplierStats).forEach(([supplierName, count]) => {
+    console.log(`${supplierName} : ${count}`);
+  });
+}

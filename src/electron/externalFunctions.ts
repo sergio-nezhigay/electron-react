@@ -198,18 +198,23 @@ export interface Supplier {
   fetchFunction: () => Promise<SupplierProduct[]>;
 }
 
+async function loadGoogleSheet(documentId: string, sheetId: number) {
+  const serviceAccountAuth = new JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+
+  const doc = new GoogleSpreadsheet(documentId, serviceAccountAuth);
+  await doc.loadInfo();
+  return doc.sheetsById[sheetId].getRows();
+}
+
 export const fetchChergProducts = async (): Promise<SupplierProduct[]> => {
   try {
-    const serviceAccountAuth = new JWT({
-      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
     const documentId = process.env.CHERG_GOOGLE_SHEET_DOCUMENT_ID;
-    const doc = new GoogleSpreadsheet(documentId, serviceAccountAuth);
-    await doc.loadInfo();
-    const sheet = doc.sheetsById[35957627];
-    const rows = await sheet.getRows();
+    const sheetId = 35957627;
+    const rows = await loadGoogleSheet(documentId, sheetId);
 
     const filtered = rows.filter((row) => {
       return row.get('Остаток') && isPositiveDigit(row.get('Остаток'));
@@ -230,6 +235,39 @@ export const fetchChergProducts = async (): Promise<SupplierProduct[]> => {
     return out;
   } catch (error) {
     throw new Error(`Failed to fetch products from Cherg: ${error.message}`);
+  }
+};
+
+export const fetchBgdnProducts = async (): Promise<SupplierProduct[]> => {
+  try {
+    const documentId = process.env.BGDN_GOOGLE_SHEET_DOCUMENT_ID;
+    const sheetId = 1963594762;
+    const rows = await loadGoogleSheet(documentId, sheetId);
+
+    const minusWords: string[] = [];
+
+    const filtered = rows.filter(
+      (row) =>
+        row.get('Наявність, шт.') &&
+        row.get('Ціна') &&
+        !minusWords.some((minusWord) => row.get('Модель').includes(minusWord))
+    );
+
+    const out: SupplierProduct[] = filtered.map((row) => ({
+      part_number: row.get('Модель').toLowerCase(),
+      name: row.get('Модель'),
+      warranty: '36',
+      instock: Number(row.get('Наявність, шт.')) || 0,
+      priceOpt: Number(row.get('Ціна').replace(/[^0-9.-]+/g, '')),
+    }));
+
+    if (out.length < 10) {
+      throw new Error('Less than 10 products found from Bgdn');
+    }
+
+    return out;
+  } catch (error) {
+    throw new Error(`Failed to fetch products from Bogdan: ${error.message}`);
   }
 };
 
@@ -538,7 +576,7 @@ const isPositiveDigit = (value: string): boolean => {
   return /^\d+$/.test(value);
 };
 
-interface ExtendedShopifyProduct extends ShopifyProduct {
+export interface ExtendedShopifyProduct extends ShopifyProduct {
   suppliers: SupplierProduct[];
   bestSupplier: SupplierProduct | null;
   bestSupplierName: string | null;
