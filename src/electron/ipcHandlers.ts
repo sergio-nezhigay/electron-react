@@ -1,20 +1,20 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import {
   fetchShopifyProducts,
+  fetchAllSupplierProducts,
+  mergeSupplierData,
+  writeExtendedProductsToFile,
+} from './utils';
+import {
   fetchChergProducts,
   fetchMezhigProducts,
   fetchRizhskaProducts,
   fetchShchusevProducts,
-  mergeSupplierData,
-  writeExtendedProductsToFile,
-  fetchAllSupplierProducts,
-  Supplier,
   fetchBrnProducts,
   fetchBgdnProducts,
-  ExtendedShopifyProduct,
   fetchEeeProducts,
-  //  ExtendedShopifyProduct,
-} from './externalFunctions';
+} from './suppliers';
+import { ExtendedShopifyProduct, Supplier } from './types';
 import path from 'path';
 
 export const registerIpcHandlers = (): void => {
