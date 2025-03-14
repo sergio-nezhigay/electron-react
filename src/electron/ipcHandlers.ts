@@ -4,6 +4,7 @@ import {
   fetchAllSupplierProducts,
   mergeSupplierData,
   writeExtendedProductsToFile,
+  postProcessExtendedProducts,
 } from './utils';
 import {
   fetchChergProducts,
@@ -51,7 +52,16 @@ export const registerIpcHandlers = (): void => {
       const filePath = path.join(__dirname, 'extendedProducts.xlsx');
       await writeExtendedProductsToFile(extendedProducts, filePath);
 
-      return `Process completed successfully! Result: ${extendedProducts.length} products processed. File saved at ${filePath}`;
+      const processedProducts = await postProcessExtendedProducts(
+        extendedProducts
+      );
+
+      const processedFilePath = path.join(__dirname, 'processedProducts.xlsx');
+      await writeExtendedProductsToFile(processedProducts, processedFilePath);
+
+      const message = `Process completed successfully! Result: ${extendedProducts.length} products processed. Files saved at ${filePath} and ${processedFilePath}`;
+      console.log(message);
+      return message;
     } catch (error) {
       return `Process failed: ${error.message}`;
     }

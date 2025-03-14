@@ -79,4 +79,8 @@ export interface ExtendedShopifyProduct extends ShopifyProduct {
   suppliers: SupplierProduct[];
   bestSupplier: SupplierProduct | null;
   bestSupplierName: string | null;
+  hotlineMinimalPrice?: number | null;
+  minimalFinalPrice?: number | null;
+  maximalFinalPrice?: number | null;
+  middleFinalPrice?: number | null;
 }
