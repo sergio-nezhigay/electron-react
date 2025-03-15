@@ -16,9 +16,11 @@ export function calculatePricePoints(
   let middleFinalPrice: number | null = null;
 
   if (!strategy && product.bestSupplierName) {
-    if (['ЧЕ', 'Б', 'BudgetDistributor'].includes(product.bestSupplierName)) {
+    if (
+      ['ЧЕ', 'Б', 'РИ', 'BudgetDistributor'].includes(product.bestSupplierName)
+    ) {
       strategy = 'aggressive';
-    } else if (['ИИ', 'РИ'].includes(product.bestSupplierName)) {
+    } else if (['ИИ'].includes(product.bestSupplierName)) {
       strategy = 'premium';
     } else {
       strategy = 'middle';
