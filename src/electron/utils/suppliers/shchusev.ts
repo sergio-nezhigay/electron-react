@@ -1,5 +1,6 @@
-import { SupplierProduct } from '../types';
 import { net } from 'electron';
+
+import { SupplierProduct } from '../../types';
 
 export const fetchShchusevProducts = async (): Promise<SupplierProduct[]> => {
   try {
@@ -25,6 +26,7 @@ export const fetchShchusevProducts = async (): Promise<SupplierProduct[]> => {
         warranty: '12',
         instock: parseInt(element[4]),
         priceOpt: parseFloat(element[3]),
+        priceRtl: parseFloat(element[2]),
       })
     );
 

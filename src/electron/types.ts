@@ -83,4 +83,5 @@ export interface ExtendedShopifyProduct extends ShopifyProduct {
   minimalFinalPrice?: number | null;
   maximalFinalPrice?: number | null;
   middleFinalPrice?: number | null;
+  finalPrice?: number | null;
 }

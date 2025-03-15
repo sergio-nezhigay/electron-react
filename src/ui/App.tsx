@@ -18,7 +18,6 @@ const theme = createTheme({
 });
 
 const App: React.FC = () => {
-  const [message, setMessage] = React.useState<string>('');
   const [versions, setVersions] = React.useState<string>('');
   const [processStatus, setProcessStatus] = React.useState<string>('');
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -31,11 +30,6 @@ const App: React.FC = () => {
     setVersions(versionsText);
     //handleLongProcess(); //temp
   }, []);
-
-  const handleSayHello = async () => {
-    const response = await window.electronAPI.sayHello('Electron');
-    setMessage(response);
-  };
 
   const handleLongProcess = async () => {
     setIsProcessing(true);
@@ -61,15 +55,6 @@ const App: React.FC = () => {
           </Paper>
 
           <Stack spacing={2}>
-            <Paper sx={{ p: 2 }}>
-              <Stack spacing={2}>
-                <Button variant='contained' onClick={handleSayHello}>
-                  Say Hello
-                </Button>
-                {message && <Typography variant='body1'>{message}</Typography>}
-              </Stack>
-            </Paper>
-
             <Paper sx={{ p: 2 }}>
               <Stack spacing={2}>
                 <Button

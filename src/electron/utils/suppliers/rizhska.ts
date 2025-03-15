@@ -1,5 +1,6 @@
-import { SupplierProduct } from '../types';
 import puppeteer from 'puppeteer';
+
+import { SupplierProduct } from '../../types';
 
 const fetchProductsFromPage = async (
   url: string

@@ -1,5 +1,6 @@
-import { SupplierProduct } from '../types';
-import { loadGoogleSheet, isPositiveDigit } from '../utils';
+import { loadGoogleSheet, isPositiveDigit } from '../basicUtils';
+
+import { SupplierProduct } from '../../types';
 
 export const fetchChergProducts = async (): Promise<SupplierProduct[]> => {
   try {

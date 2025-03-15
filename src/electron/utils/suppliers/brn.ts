@@ -1,7 +1,8 @@
-import { SupplierProduct } from '../types';
 import { net } from 'electron';
 import fs from 'fs';
 import ExcelJS from 'exceljs';
+
+import { SupplierProduct } from '../../types';
 
 export const fetchBrnProducts = async (): Promise<SupplierProduct[]> => {
   try {

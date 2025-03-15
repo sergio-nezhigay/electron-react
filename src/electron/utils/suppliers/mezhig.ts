@@ -1,6 +1,7 @@
-import { SupplierProduct } from '../types';
 import ExcelJS from 'exceljs';
 import path from 'path';
+
+import { SupplierProduct } from '../../types';
 
 export const fetchMezhigProducts = async (): Promise<SupplierProduct[]> => {
   try {

@@ -6,14 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     chrome: (): string => process.versions.chrome,
     electron: (): string => process.versions.electron,
   },
-  sayHello: async (name: string): Promise<string> => {
-    try {
-      return await ipcRenderer.invoke('say-hello', name);
-    } catch (error) {
-      console.error('Failed to invoke say-hello:', error);
-      return 'Failed to send message';
-    }
-  },
+
   longProcess: async (): Promise<string> => {
     try {
       return await ipcRenderer.invoke('long-process');
@@ -32,7 +25,7 @@ declare global {
         chrome: () => string;
         electron: () => string;
       };
-      sayHello: (name: string) => Promise<string>;
+
       longProcess: () => Promise<string>;
     };
   }

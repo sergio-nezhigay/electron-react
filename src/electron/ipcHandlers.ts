@@ -1,43 +1,36 @@
-import { ipcMain, IpcMainInvokeEvent } from 'electron';
+import path from 'path';
+import { ipcMain } from 'electron';
+
 import {
   fetchShopifyProducts,
-  fetchAllSupplierProducts,
-  mergeSupplierData,
-  writeExtendedProductsToFile,
-  postProcessExtendedProducts,
-} from './utils';
-import {
   fetchChergProducts,
   fetchMezhigProducts,
   fetchRizhskaProducts,
   fetchShchusevProducts,
-  fetchBrnProducts,
   fetchBgdnProducts,
   fetchEeeProducts,
-} from './suppliers';
-import { ExtendedShopifyProduct, Supplier } from './types';
-import path from 'path';
+  fetchAllSupplierProducts,
+  mergeSupplierData,
+  logMergedProductsStats,
+  writeExtendedProductsToFile,
+  enrichProductsWithPriceData,
+} from './utils';
+
+import { Supplier } from './types';
 
 export const registerIpcHandlers = (): void => {
-  ipcMain.handle(
-    'say-hello',
-    async (event: IpcMainInvokeEvent, name: string): Promise<string> => {
-      return `Hello, ${name}!`;
-    }
-  );
-
   ipcMain.handle('long-process', async (): Promise<string> => {
     try {
       const shopifyProducts = await fetchShopifyProducts();
 
       const suppliers: Supplier[] = [
-        { name: 'Cherg', fetchFunction: fetchChergProducts },
-        { name: 'Mezhig', fetchFunction: fetchMezhigProducts },
-        { name: 'Rizhska', fetchFunction: fetchRizhskaProducts },
-        { name: 'Shchusev', fetchFunction: fetchShchusevProducts },
-        { name: 'Brn', fetchFunction: fetchBrnProducts },
-        { name: 'Bgdn', fetchFunction: fetchBgdnProducts },
-        { name: 'Eee', fetchFunction: fetchEeeProducts },
+        { name: 'ЧЕ1', fetchFunction: fetchChergProducts },
+        { name: 'МЕ2', fetchFunction: fetchMezhigProducts },
+        { name: 'РИ3', fetchFunction: fetchRizhskaProducts },
+        { name: 'ЩУ4', fetchFunction: fetchShchusevProducts },
+        //{ name: 'Б', fetchFunction: fetchBrnProducts },
+        { name: 'Бо5', fetchFunction: fetchBgdnProducts },
+        { name: 'ИИ6', fetchFunction: fetchEeeProducts },
       ];
 
       const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
@@ -52,7 +45,7 @@ export const registerIpcHandlers = (): void => {
       const filePath = path.join(__dirname, 'extendedProducts.xlsx');
       await writeExtendedProductsToFile(extendedProducts, filePath);
 
-      const processedProducts = await postProcessExtendedProducts(
+      const processedProducts = await enrichProductsWithPriceData(
         extendedProducts
       );
 
@@ -67,23 +60,3 @@ export const registerIpcHandlers = (): void => {
     }
   });
 };
-
-function logMergedProductsStats(
-  extendedProducts: ExtendedShopifyProduct[]
-): void {
-  const supplierStats: Record<string, number> = {};
-
-  extendedProducts.forEach((product) => {
-    const supplierName = product.bestSupplierName;
-    if (!supplierStats[supplierName]) {
-      supplierStats[supplierName] = 0;
-    }
-
-    supplierStats[supplierName] += 1;
-  });
-
-  console.log(`Merged Products: ${extendedProducts.length} total products`);
-  Object.entries(supplierStats).forEach(([supplierName, count]) => {
-    console.log(`${supplierName} : ${count}`);
-  });
-}
