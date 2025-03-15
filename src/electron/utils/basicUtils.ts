@@ -1,6 +1,6 @@
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { ExtendedShopifyProduct, Supplier, SupplierProduct } from '../types';
+import { Supplier, SupplierProduct, ExtendedShopifyProduct } from '../types';
 
 export const isPositiveDigit = (value: string): boolean => {
   return /^\d+$/.test(value);
@@ -60,6 +60,21 @@ const USER_AGENTS = [
 export function getRandomUserAgent(): string {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
+
+// Helper to properly display supplier names with Cyrillic characters
+export const formatSupplierName = (name: string): string => {
+  // Ensure the string is properly encoded as UTF-8
+  return Buffer.from(name, 'utf8').toString('utf8');
+};
+
+// Enhance console.log for better Cyrillic display
+export const enhancedLog = (message: string, data?: any): void => {
+  if (typeof data === 'string') {
+    data = formatSupplierName(data);
+  }
+
+  console.log(formatSupplierName(message), data || '');
+};
 
 export function logMergedProductsStats(
   extendedProducts: ExtendedShopifyProduct[]

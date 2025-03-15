@@ -1,5 +1,4 @@
 import { net } from 'electron';
-
 import {
   PostData,
   ShopifyResponse,

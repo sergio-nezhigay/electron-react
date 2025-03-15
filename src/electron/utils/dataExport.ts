@@ -1,5 +1,4 @@
 import ExcelJS from 'exceljs';
-
 import { ExtendedShopifyProduct } from '../types';
 
 export const writeExtendedProductsToFile = async (

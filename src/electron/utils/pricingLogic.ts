@@ -1,7 +1,6 @@
 import puppeteer, { Browser } from 'puppeteer';
 
 import { getRandomUserAgent, makeRandomDelay } from './basicUtils';
-
 import { ExtendedShopifyProduct } from '../types';
 
 export function calculatePricePoints(

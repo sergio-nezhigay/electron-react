@@ -1,6 +1,5 @@
-import { loadGoogleSheet } from '../basicUtils';
-
 import { SupplierProduct } from '../../types';
+import { loadGoogleSheet } from '../basicUtils';
 
 export const fetchBgdnProducts = async (): Promise<SupplierProduct[]> => {
   try {

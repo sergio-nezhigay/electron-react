@@ -2,8 +2,7 @@ import ExcelJS from 'exceljs';
 import path from 'path';
 import xml2js from 'xml2js';
 import { net } from 'electron';
-
-import { SupplierProduct, Offer } from '../../types';
+import { Offer, SupplierProduct } from '../../types';
 
 async function readXML(url: string): Promise<SupplierProduct[]> {
   try {

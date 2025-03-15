@@ -7,6 +7,7 @@ import {
   fetchMezhigProducts,
   fetchRizhskaProducts,
   fetchShchusevProducts,
+  fetchBrnProducts,
   fetchBgdnProducts,
   fetchEeeProducts,
   fetchAllSupplierProducts,
@@ -15,7 +16,6 @@ import {
   writeExtendedProductsToFile,
   enrichProductsWithPriceData,
 } from './utils';
-
 import { Supplier } from './types';
 
 export const registerIpcHandlers = (): void => {
@@ -24,13 +24,13 @@ export const registerIpcHandlers = (): void => {
       const shopifyProducts = await fetchShopifyProducts();
 
       const suppliers: Supplier[] = [
-        { name: 'ЧЕ1', fetchFunction: fetchChergProducts },
-        { name: 'МЕ2', fetchFunction: fetchMezhigProducts },
-        { name: 'РИ3', fetchFunction: fetchRizhskaProducts },
-        { name: 'ЩУ4', fetchFunction: fetchShchusevProducts },
-        //{ name: 'Б', fetchFunction: fetchBrnProducts },
-        { name: 'Бо5', fetchFunction: fetchBgdnProducts },
-        { name: 'ИИ6', fetchFunction: fetchEeeProducts },
+        { name: 'ЧЕ', fetchFunction: fetchChergProducts },
+        { name: 'МЕ', fetchFunction: fetchMezhigProducts },
+        { name: 'РИ', fetchFunction: fetchRizhskaProducts },
+        { name: 'ЩУ', fetchFunction: fetchShchusevProducts },
+        { name: 'Б', fetchFunction: fetchBrnProducts },
+        { name: 'Бо', fetchFunction: fetchBgdnProducts },
+        { name: 'ИИ', fetchFunction: fetchEeeProducts },
       ];
 
       const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
