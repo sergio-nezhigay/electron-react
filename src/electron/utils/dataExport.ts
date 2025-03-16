@@ -1,10 +1,12 @@
 import ExcelJS from 'exceljs';
+import path from 'path';
 import { ExtendedShopifyProduct } from '../types';
 
 export const writeExtendedProductsToFile = async (
   extendedProducts: ExtendedShopifyProduct[],
-  filePath: string
+  filename: string
 ): Promise<void> => {
+  //  const filePath = path.join(__dirname, '..', filename);
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Extended Products');
 
@@ -54,5 +56,5 @@ export const writeExtendedProductsToFile = async (
     });
   });
 
-  await workbook.xlsx.writeFile(filePath);
+  await workbook.xlsx.writeFile(filename);
 };

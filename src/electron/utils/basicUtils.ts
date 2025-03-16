@@ -1,6 +1,12 @@
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { Supplier, SupplierProduct, ExtendedShopifyProduct } from '../types';
+import {
+  Supplier,
+  SupplierProduct,
+  ExtendedShopifyProduct,
+  ShopifyProduct,
+  ShopifyResponse,
+} from '../types';
 
 export const isPositiveDigit = (value: string): boolean => {
   return /^\d+$/.test(value);
@@ -26,7 +32,10 @@ export const fetchAllSupplierProducts = async (
   for (const supplier of suppliers) {
     try {
       const products = await supplier.fetchFunction();
-      console.log(`Fetched ${products.length} products from ${supplier.name}`);
+
+      // Use your existing enhancedLog function for better Cyrillic display
+      enhancedLog(`Fetched ${products.length} products from ${supplier.name}`);
+
       allSupplierProducts.push(
         ...products.map((product) => ({
           ...product,
@@ -68,11 +77,10 @@ export const formatSupplierName = (name: string): string => {
 };
 
 // Enhance console.log for better Cyrillic display
-export const enhancedLog = (message: string, data?: any): void => {
+export const enhancedLog = (message: string, data?: unknown): void => {
   if (typeof data === 'string') {
     data = formatSupplierName(data);
   }
-
   console.log(formatSupplierName(message), data || '');
 };
 
@@ -95,3 +103,55 @@ export function logMergedProductsStats(
     console.log(`${supplierName} : ${count}`);
   });
 }
+
+export const mergeSupplierData = (
+  shopifyProducts: ShopifyProduct[],
+  allSupplierProducts: SupplierProduct[]
+): ExtendedShopifyProduct[] => {
+  const extendedProducts: ExtendedShopifyProduct[] = shopifyProducts.map(
+    (product) => {
+      const suppliers = allSupplierProducts.filter(
+        (supplier) =>
+          supplier.part_number.toLowerCase() ===
+            product.part_number.toLowerCase() ||
+          (product.custom_alternative_part_number &&
+            supplier.part_number.toLowerCase() ===
+              product.custom_alternative_part_number.toLowerCase())
+      );
+
+      const bestSupplier = suppliers.reduce((best, current) => {
+        if (!best || current.priceOpt < best.priceOpt) {
+          return current;
+        }
+        return best;
+      }, null as SupplierProduct | null);
+
+      return {
+        ...product,
+        suppliers,
+        bestSupplier,
+        bestSupplierName: bestSupplier ? bestSupplier.supplierName : null,
+      };
+    }
+  );
+
+  return extendedProducts;
+};
+
+export const extractProducts = (data: ShopifyResponse): ShopifyProduct[] => {
+  return (
+    data.data?.products.edges.map(
+      (edge): ShopifyProduct => ({
+        id: edge.node.id,
+        title: edge.node.title,
+        handle: edge.node.handle,
+        part_number: edge.node.variants.edges[0]?.node.barcode || '',
+        custom_hotline_href: edge.node.custom_hotline_href?.value || '',
+        custom_product_number_1_sku:
+          edge.node.custom_product_number_1?.value || '',
+        custom_alternative_part_number:
+          edge.node.custom_alternative_part_number?.value || '',
+      })
+    ) || []
+  );
+};

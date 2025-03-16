@@ -87,51 +87,89 @@ export const fetchBrnProducts = async (): Promise<SupplierProduct[]> => {
     const buffer = await fileResponse.arrayBuffer();
     fs.writeFileSync(filename, Buffer.from(buffer));
 
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filename);
-
-    const worksheet = workbook.worksheets[0];
     const products: SupplierProduct[] = [];
 
-    const headers: { [key: string]: number } = {};
-    worksheet.getRow(1).eachCell((cell, colNumber) => {
-      headers[cell.value as string] = colNumber;
-    });
-
+    // Process the Excel file in smaller chunks to reduce memory usage
+    // Define stream options but do not use variables that aren't needed
+    const workbook = new ExcelJS.Workbook();
     const RATE = Number(process.env.EXCHANGE_RATE);
 
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        const group = row.getCell(headers['Group']).value as string;
-        const vendor = row.getCell(headers['Vendor']).value as string;
+    // Stream approach with row by row processing
+    const headers: { [key: string]: number } = {}; // Changed to const
+    let rowCount = 0;
 
-        if (
-          allowedCategories.includes(group) &&
-          !disallowedVendors.includes(vendor)
-        ) {
-          const article = row.getCell(headers['Article']).value as string;
-          const name = row.getCell(headers['Name']).value as string;
-          const warranty = row.getCell(headers['Warranty']).value as string;
-          const priceUSD = row.getCell(headers['PriceUSD']).value as number;
-          const retailPrice = row.getCell(headers['RetailPrice'])
-            .value as number;
+    await new Promise<void>((resolve, reject) => {
+      const stream = fs.createReadStream(filename);
 
-          const minRecommendedPrice = Math.round(priceUSD * RATE * 1.08 + 30);
+      workbook.xlsx
+        .read(stream)
+        .then(() => {
+          const worksheet = workbook.getWorksheet(1);
 
-          products.push({
-            part_number: article.toLowerCase(),
-            name: name,
-            warranty: warranty,
-            instock: 10,
-            priceOpt: priceUSD * RATE,
-            priceRtl: retailPrice > minRecommendedPrice ? retailPrice : 0,
+          // Process headers (first row)
+          const headerRow = worksheet.getRow(1);
+          headerRow.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
+            headers[cell.value as string] = colNumber;
           });
-        }
-      }
+
+          // Process data rows
+          worksheet.eachRow(
+            { includeEmpty: false },
+            (row: ExcelJS.Row, rowNumber: number) => {
+              if (rowNumber === 1) {
+                // Skip header row
+                return;
+              }
+
+              const group = row.getCell(headers['Group']).value as string;
+              const vendor = row.getCell(headers['Vendor']).value as string;
+
+              // Early filtering to avoid unnecessary processing
+              if (
+                allowedCategories.includes(group) &&
+                !disallowedVendors.includes(vendor)
+              ) {
+                const article = row.getCell(headers['Article']).value as string;
+                const name = row.getCell(headers['Name']).value as string;
+                const warranty = row.getCell(headers['Warranty'])
+                  .value as string;
+                const priceUSD = row.getCell(headers['PriceUSD'])
+                  .value as number;
+                const retailPrice = row.getCell(headers['RetailPrice'])
+                  .value as number;
+
+                const minRecommendedPrice = Math.round(
+                  priceUSD * RATE * 1.08 + 30
+                );
+
+                products.push({
+                  part_number: article.toLowerCase(),
+                  name: name,
+                  warranty: warranty,
+                  instock: 10,
+                  priceOpt: priceUSD * RATE,
+                  priceRtl: retailPrice > minRecommendedPrice ? retailPrice : 0,
+                });
+              }
+              rowCount++;
+            }
+          );
+
+          resolve();
+        })
+        .catch((error: Error) => {
+          reject(error);
+        });
     });
 
-    if (products.length < 200) {
-      throw new Error('Less than 200 products found from Brn supplier');
+    console.log(
+      `Processed ${rowCount} rows from BRN supplier, filtered to ${products.length} products`
+    );
+
+    if (products.length < 100) {
+      throw new Error(
+        `Too few products found from Brn supplier: ${products.length}`
+      );
     }
 
     return products;

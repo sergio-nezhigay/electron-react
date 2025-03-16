@@ -45,10 +45,7 @@ export interface ShopifyResponse {
 
 export interface PostData {
   query: string;
-  variables: {
-    first: number;
-    after?: string | null;
-  };
+  variables?: Record<string, unknown>;
 }
 
 export interface SupplierProduct {

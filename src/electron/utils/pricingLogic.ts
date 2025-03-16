@@ -245,3 +245,63 @@ export const enrichProductsWithPriceData = async (
     await browser.disconnect();
   }
 };
+
+export const convertProductsToJsonLines = (
+  products: ExtendedShopifyProduct[]
+): string[] => {
+  const transformedData = products.map((product) => {
+    const isAtStock = product.bestSupplier?.instock
+      ? product.bestSupplier.instock > 0
+      : false;
+
+    const parsedCost = product.bestSupplier?.priceOpt || 0;
+    const cost = parsedCost.toFixed(0);
+    const parsedPrice = product.finalPrice || 0;
+    const price = parsedPrice.toFixed(0);
+    const delta = (parsedPrice - parsedCost).toFixed(0);
+
+    return {
+      input: {
+        id: product.id,
+        title: product.title,
+        variants: [
+          {
+            price: price,
+            barcode: product.part_number,
+            sku: `${product.custom_product_number_1_sku}^${
+              product.bestSupplierName || ''
+            }`,
+            inventoryManagement: 'SHOPIFY',
+            inventoryQuantities: {
+              availableQuantity: isAtStock
+                ? Number(product.bestSupplier?.instock || 0) + 10
+                : 0,
+              locationId: `gid://shopify/Location/97195786556`,
+            },
+            inventoryItem: {
+              cost,
+            },
+          },
+        ],
+        metafields: [
+          {
+            namespace: 'custom',
+            key: 'delta',
+            value: delta,
+            type: 'number_integer',
+          },
+          {
+            namespace: 'custom',
+            key: 'warranty',
+            value: product.bestSupplier?.warranty || '',
+            type: 'single_line_text_field',
+          },
+        ],
+      },
+    };
+  });
+
+  const lines = transformedData.map((obj) => JSON.stringify(obj));
+
+  return lines;
+};

@@ -1,5 +1,7 @@
+import { ipcMain, app } from 'electron';
+import fs from 'fs';
+import { promisify } from 'util';
 import path from 'path';
-import { ipcMain } from 'electron';
 
 import {
   fetchShopifyProducts,
@@ -15,8 +17,12 @@ import {
   logMergedProductsStats,
   writeExtendedProductsToFile,
   enrichProductsWithPriceData,
-} from './utils';
+  convertProductsToJsonLines,
+  startBulkUpdate,
+} from './utils/index';
 import { Supplier } from './types';
+
+const writeFileAsync = promisify(fs.writeFile);
 
 export const registerIpcHandlers = (): void => {
   ipcMain.handle('long-process', async (): Promise<string> => {
@@ -35,28 +41,49 @@ export const registerIpcHandlers = (): void => {
 
       const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
 
-      const extendedProducts = mergeSupplierData(
+      const step1MergedProducts = mergeSupplierData(
         shopifyProducts,
         allSupplierProducts
       );
 
-      logMergedProductsStats(extendedProducts);
+      logMergedProductsStats(step1MergedProducts);
 
-      const filePath = path.join(__dirname, 'extendedProducts.xlsx');
-      await writeExtendedProductsToFile(extendedProducts, filePath);
-
-      const processedProducts = await enrichProductsWithPriceData(
-        extendedProducts
+      const downloadDataPath = app.getPath('downloads');
+      const step1OutputPath = path.join(
+        downloadDataPath,
+        'step1_products.xlsx'
+      );
+      console.log('🚀 ~ step1OutputPath:', step1OutputPath);
+      const step2OutputPath = path.join(
+        downloadDataPath,
+        'step2_products.xlsx'
       );
 
-      const processedFilePath = path.join(__dirname, 'processedProducts.xlsx');
-      await writeExtendedProductsToFile(processedProducts, processedFilePath);
+      await writeExtendedProductsToFile(step1MergedProducts, step1OutputPath);
 
-      const message = `Process completed successfully! Result: ${extendedProducts.length} products processed. Files saved at ${filePath} and ${processedFilePath}`;
+      const step2EnrichedProducts = await enrichProductsWithPriceData(
+        step1MergedProducts
+      );
+
+      await writeExtendedProductsToFile(step2EnrichedProducts, step2OutputPath);
+
+      const jsonlLines = convertProductsToJsonLines(step2EnrichedProducts);
+
+      const jsonlOutputPath = path.join(downloadDataPath, 'shopify_data.jsonl');
+      const joinedJsonLines = jsonlLines.join('\n');
+
+      await writeFileAsync(jsonlOutputPath, joinedJsonLines, 'utf-8');
+      console.log(`Successfully wrote JSON lines to ${jsonlOutputPath}`);
+
+      await startBulkUpdate(jsonlOutputPath);
+
+      const message = `Process completed successfully! Result: ${step1MergedProducts.length} products processed. New format prepared in ${jsonlOutputPath}`;
       console.log(message);
       return message;
     } catch (error) {
-      return `Process failed: ${error.message}`;
+      const message = error.message;
+      console.log(message);
+      return `Process failed: ${message}`;
     }
   });
 };
