@@ -44,7 +44,7 @@ export const fetchBrnProducts = async (): Promise<SupplierProduct[]> => {
       'Электроинструмент',
     ];
 
-    const disallowedVendors = ['Defender', 'Tolsen'];
+    const disallowedVendors = ['Defender', 'Tolsen', 'Werk'];
 
     const authResponse = await net.fetch(authUrl, {
       method: 'POST',

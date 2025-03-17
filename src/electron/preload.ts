@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   versions: {
@@ -15,6 +15,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return 'Process failed';
     }
   },
+
+  onProgressUpdate: (
+    callback: (
+      event: IpcRendererEvent,
+      progressData: { task: string; progress: number }
+    ) => void
+  ) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      progressData: { task: string; progress: number }
+    ) => callback(_event, progressData);
+    ipcRenderer.on('progress-update', subscription);
+
+    return () => {
+      ipcRenderer.removeListener('progress-update', subscription);
+    };
+  },
 });
 
 declare global {
@@ -27,6 +44,12 @@ declare global {
       };
 
       longProcess: () => Promise<string>;
+      onProgressUpdate: (
+        callback: (
+          event: IpcRendererEvent,
+          progressData: { task: string; progress: number }
+        ) => void
+      ) => () => void;
     };
   }
 }

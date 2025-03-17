@@ -79,8 +79,7 @@ export const fetchShopifyProducts = async (): Promise<ShopifyProduct[]> => {
       const data: ShopifyResponse = await shopifyGraphQLRequest({
         query,
         variables: {
-          first: 50,
-          //  first: 250,
+          first: 250,
           after: endCursor,
         },
       });

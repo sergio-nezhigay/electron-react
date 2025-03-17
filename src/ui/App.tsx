@@ -8,6 +8,7 @@ import {
   Paper,
   CircularProgress,
   Stack,
+  LinearProgress,
 } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
@@ -21,6 +22,8 @@ const App: React.FC = () => {
   const [versions, setVersions] = React.useState<string>('');
   const [processStatus, setProcessStatus] = React.useState<string>('');
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [currentTask, setCurrentTask] = React.useState<string>('');
+  const [progress, setProgress] = React.useState<number>(0);
 
   React.useEffect(() => {
     const versionsText =
@@ -28,12 +31,22 @@ const App: React.FC = () => {
       `Chrome: ${window.electronAPI.versions.chrome()}, ` +
       `Electron: ${window.electronAPI.versions.electron()}`;
     setVersions(versionsText);
-    //handleLongProcess(); //temp
+
+    const unsubscribe = window.electronAPI.onProgressUpdate(
+      (_, progressData) => {
+        setCurrentTask(progressData.task);
+        setProgress(progressData.progress);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   const handleLongProcess = async () => {
     setIsProcessing(true);
     setProcessStatus('Processing...');
+    setProgress(0);
+    setCurrentTask('Starting process...');
     const result = await window.electronAPI.longProcess();
     setProcessStatus(result);
     setIsProcessing(false);
@@ -69,6 +82,18 @@ const App: React.FC = () => {
                 >
                   {isProcessing ? 'Processing...' : 'Start Long Process'}
                 </Button>
+
+                {isProcessing && (
+                  <>
+                    <Typography variant='body2' color='textSecondary'>
+                      {currentTask}
+                    </Typography>
+                    <LinearProgress variant='determinate' value={progress} />
+                    <Typography variant='caption' align='right'>
+                      {progress}%
+                    </Typography>
+                  </>
+                )}
 
                 {processStatus && (
                   <Typography variant='body1'>{processStatus}</Typography>
