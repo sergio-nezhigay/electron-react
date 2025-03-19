@@ -115,7 +115,7 @@ async function getMinimalPriceFromHotlineUrl(
       'Cache-Control': 'max-age=0',
     });
 
-    await makeRandomDelay(1000, 3000);
+    await makeRandomDelay(1000, 2000);
 
     await page.setViewport({
       width: 1366,
@@ -140,7 +140,7 @@ async function getMinimalPriceFromHotlineUrl(
       }
     });
 
-    await makeRandomDelay(500, 3000);
+    await makeRandomDelay(500, 2000);
 
     const prices = await page.evaluate((): (number | null)[] => {
       const priceElements = Array.from(
@@ -216,7 +216,7 @@ export const enrichProductsWithPriceData = async (
             browser
           );
 
-          await makeRandomDelay(1000, 5000);
+          await makeRandomDelay(1000, 4000);
         }
 
         const productWithHotlinePrice = {
@@ -246,6 +246,23 @@ export const enrichProductsWithPriceData = async (
   }
 };
 
+function computeSupplierAdjustedDelta(
+  delta: number,
+  supplierName: string | undefined
+): number {
+  let adjustedDelta = delta;
+
+  if (supplierName && supplierName.includes('Щу')) {
+    adjustedDelta -= 30;
+  }
+
+  if (adjustedDelta >= 200) adjustedDelta *= 1.2;
+  else if (adjustedDelta >= 150) adjustedDelta *= 1.15;
+  else if (adjustedDelta >= 100) adjustedDelta *= 1.1;
+
+  return adjustedDelta;
+}
+
 export const convertProductsToJsonLines = (
   products: ExtendedShopifyProduct[]
 ): string[] => {
@@ -258,7 +275,15 @@ export const convertProductsToJsonLines = (
     const cost = parsedCost.toFixed(0);
     const parsedPrice = product.finalPrice || 0;
     const price = parsedPrice.toFixed(0);
-    const delta = (parsedPrice - parsedCost).toFixed(0);
+
+    const baseDelta = parsedPrice - parsedCost;
+
+    const adjustedDelta = computeSupplierAdjustedDelta(
+      baseDelta,
+      product.bestSupplierName
+    );
+
+    const delta = adjustedDelta.toFixed(0);
 
     return {
       input: {
