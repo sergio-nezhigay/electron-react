@@ -3,10 +3,7 @@ import puppeteer, { Browser } from 'puppeteer';
 import { getRandomUserAgent, makeRandomDelay } from './basicUtils';
 import { ExtendedShopifyProduct } from '../types';
 
-export function calculatePricePoints(
-  product: ExtendedShopifyProduct,
-  strategy?: 'aggressive' | 'middle' | 'premium'
-): {
+export function calculatePricePoints(product: ExtendedShopifyProduct): {
   minimalFinalPrice: number | null;
   maximalFinalPrice: number | null;
   middleFinalPrice: number | null;
@@ -14,19 +11,16 @@ export function calculatePricePoints(
   let minimalFinalPrice: number | null = null;
   let maximalFinalPrice: number | null = null;
   let middleFinalPrice: number | null = null;
+  let strategy: 'aggressive' | 'premium' | 'middle' = 'middle';
 
-  if (!strategy && product.bestSupplierName) {
+  if (product.bestSupplierName) {
     if (
       ['ЧЕ', 'Б', 'РИ', 'BudgetDistributor'].includes(product.bestSupplierName)
     ) {
       strategy = 'aggressive';
     } else if (['ИИ'].includes(product.bestSupplierName)) {
       strategy = 'premium';
-    } else {
-      strategy = 'middle';
     }
-  } else if (!strategy) {
-    strategy = 'middle';
   }
 
   if (product.bestSupplier?.priceOpt) {
@@ -34,42 +28,57 @@ export function calculatePricePoints(
 
     switch (strategy) {
       case 'aggressive':
-        minimalFinalPrice = parseFloat((optPrice * 1.05 + 25).toFixed(2));
-        middleFinalPrice = parseFloat((optPrice * 1.1 + 50).toFixed(2));
-        maximalFinalPrice = parseFloat((optPrice * 1.15 + 75).toFixed(2));
+        minimalFinalPrice = parseFloat((optPrice * 1.04 + 25).toFixed(0));
+        middleFinalPrice = parseFloat((optPrice * 1.07 + 40).toFixed(0));
+        maximalFinalPrice = parseFloat((optPrice * 1.15 + 75).toFixed(0));
         break;
 
       case 'premium':
-        minimalFinalPrice = parseFloat((optPrice * 1.1 + 50).toFixed(2));
-        middleFinalPrice = parseFloat((optPrice * 1.2 + 100).toFixed(2));
-        maximalFinalPrice = parseFloat((optPrice * 1.3 + 150).toFixed(2));
+        minimalFinalPrice = parseFloat((optPrice * 1.1 + 50).toFixed(0));
+        middleFinalPrice = parseFloat((optPrice * 1.2 + 100).toFixed(0));
+        maximalFinalPrice = parseFloat((optPrice * 1.3 + 150).toFixed(0));
         break;
 
       case 'middle':
       default:
-        minimalFinalPrice = parseFloat((optPrice * 1.07 + 50).toFixed(2));
-        middleFinalPrice = parseFloat((optPrice * 1.15 + 100).toFixed(2));
-        maximalFinalPrice = parseFloat((optPrice * 1.2 + 150).toFixed(2));
+        minimalFinalPrice = parseFloat((optPrice * 1.07 + 50).toFixed(0));
+        middleFinalPrice = parseFloat((optPrice * 1.15 + 100).toFixed(0));
+        maximalFinalPrice = parseFloat((optPrice * 1.2 + 150).toFixed(0));
         break;
     }
   }
-
+  const instock = product.bestSupplier?.instock || 0;
   return {
-    minimalFinalPrice,
-    maximalFinalPrice,
-    middleFinalPrice,
+    minimalFinalPrice:
+      minimalFinalPrice * calculatePriceAdjustmentFactor(instock),
+    maximalFinalPrice:
+      maximalFinalPrice * calculatePriceAdjustmentFactor(instock),
+    middleFinalPrice:
+      middleFinalPrice * calculatePriceAdjustmentFactor(instock),
   };
 }
 
-export function calculateFinalPrice(
-  retailPrice: number | null,
-  hotlinePrice: number | null,
+export function calculatePriceAdjustmentFactor(instock: number): number {
+  if (instock === 1) {
+    return 1.02;
+  } else if (instock > 3) {
+    return 0.97;
+  } else if (instock > 2) {
+    return 0.98;
+  }
+  return 1.0;
+}
+
+export function calculateFinalPrice(params: {
+  retailPrice: number | null;
+  minimalAllCompetitors: number | null;
   pricePoints: {
     minimalFinalPrice: number | null;
     middleFinalPrice: number | null;
     maximalFinalPrice: number | null;
-  }
-): number | null {
+  };
+}): number | null {
+  const { retailPrice, minimalAllCompetitors, pricePoints } = params;
   const { minimalFinalPrice, middleFinalPrice, maximalFinalPrice } =
     pricePoints;
 
@@ -77,19 +86,19 @@ export function calculateFinalPrice(
     return retailPrice;
   }
 
-  if (hotlinePrice === null) {
+  if (minimalAllCompetitors === null) {
     return maximalFinalPrice;
   }
 
-  if (maximalFinalPrice !== null && hotlinePrice > maximalFinalPrice) {
+  if (maximalFinalPrice !== null && minimalAllCompetitors > maximalFinalPrice) {
     return maximalFinalPrice;
   }
 
-  if (minimalFinalPrice !== null && hotlinePrice < minimalFinalPrice) {
+  if (minimalFinalPrice !== null && minimalAllCompetitors < minimalFinalPrice) {
     return middleFinalPrice;
   }
 
-  return hotlinePrice;
+  return minimalAllCompetitors;
 }
 
 async function getMinimalPriceFromHotlineUrl(
@@ -219,18 +228,26 @@ export const enrichProductsWithPriceData = async (
           await makeRandomDelay(1000, 4000);
         }
 
+        const minimalOtherCompetitor = product.custom_competitor_minimum_price
+          ? parseFloat(product.custom_competitor_minimum_price)
+          : null;
+
+        const minimalAllCompetitors = minimalOtherCompetitor
+          ? Math.min(minimalHotlinePrice, minimalOtherCompetitor)
+          : minimalHotlinePrice;
+
         const productWithHotlinePrice = {
           ...product,
-          hotlineMinimalPrice: minimalHotlinePrice,
+          minimalHotlinePrice,
         };
 
-        const pricePoints = calculatePricePoints(productWithHotlinePrice);
+        const pricePoints = calculatePricePoints(product);
 
-        const finalPrice = calculateFinalPrice(
-          product.bestSupplier?.priceRtl || null,
-          minimalHotlinePrice,
-          pricePoints
-        );
+        const finalPrice = calculateFinalPrice({
+          retailPrice: product.bestSupplier?.priceRtl || null,
+          minimalAllCompetitors,
+          pricePoints,
+        });
 
         processedProducts.push({
           ...productWithHotlinePrice,

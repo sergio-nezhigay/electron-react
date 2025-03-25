@@ -65,6 +65,9 @@ export const fetchShopifyProducts = async (): Promise<ShopifyProduct[]> => {
               custom_alternative_part_number: metafield(namespace: "custom", key: "alternative_part_number") {
                 value
               }
+              custom_competitor_minimum_price: metafield(namespace: "custom", key: "competitor_minimum_price") {
+                value
+              }
             }
           }
           pageInfo {

@@ -7,6 +7,15 @@ import {
   ShopifyProduct,
   ShopifyResponse,
 } from '../types';
+import {
+  fetchChergProducts,
+  fetchMezhigProducts,
+  fetchRizhskaProducts,
+  fetchShchusevProducts,
+  fetchBrnProducts,
+  fetchBgdnProducts,
+  fetchEeeProducts,
+} from './suppliers';
 
 export const isPositiveDigit = (value: string): boolean => {
   return /^\d+$/.test(value);
@@ -24,9 +33,47 @@ export async function loadGoogleSheet(documentId: string, sheetId: number) {
   return doc.sheetsById[sheetId].getRows();
 }
 
-export const fetchAllSupplierProducts = async (
-  suppliers: Supplier[]
-): Promise<SupplierProduct[]> => {
+export const fetchAllSupplierProducts = async (): Promise<
+  SupplierProduct[]
+> => {
+  const suppliers: Supplier[] = [
+    {
+      name: 'ЧЕ',
+      fetchFunction: fetchChergProducts,
+      priceNormalizationFactor: 1,
+    },
+    {
+      name: 'МЕ',
+      fetchFunction: fetchMezhigProducts,
+      priceNormalizationFactor: 1.02,
+    },
+    {
+      name: 'РИ',
+      fetchFunction: fetchRizhskaProducts,
+      priceNormalizationFactor: 1.2,
+    },
+    {
+      name: 'ЩУ',
+      fetchFunction: fetchShchusevProducts,
+      priceNormalizationFactor: 1,
+    },
+    {
+      name: 'Б',
+      fetchFunction: fetchBrnProducts,
+      priceNormalizationFactor: 1,
+    },
+    {
+      name: 'Бо',
+      fetchFunction: fetchBgdnProducts,
+      priceNormalizationFactor: 1,
+    },
+    {
+      name: 'ИИ',
+      fetchFunction: fetchEeeProducts,
+      priceNormalizationFactor: 1,
+    },
+  ];
+
   const allSupplierProducts: SupplierProduct[] = [];
 
   for (const supplier of suppliers) {
@@ -40,6 +87,8 @@ export const fetchAllSupplierProducts = async (
         ...products.map((product) => ({
           ...product,
           supplierName: supplier.name,
+          normalizedPrice:
+            product.priceOpt * (supplier.priceNormalizationFactor || 1),
         }))
       );
     } catch (error) {
@@ -120,7 +169,7 @@ export const mergeSupplierData = (
       );
 
       const bestSupplier = suppliers.reduce((best, current) => {
-        if (!best || current.priceOpt < best.priceOpt) {
+        if (!best || current.normalizedPrice < best.normalizedPrice) {
           return current;
         }
         return best;
@@ -151,6 +200,8 @@ export const extractProducts = (data: ShopifyResponse): ShopifyProduct[] => {
           edge.node.custom_product_number_1?.value || '',
         custom_alternative_part_number:
           edge.node.custom_alternative_part_number?.value || '',
+        custom_competitor_minimum_price:
+          edge.node.custom_competitor_minimum_price?.value || '',
       })
     ) || []
   );

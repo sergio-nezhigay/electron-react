@@ -5,13 +5,6 @@ import path from 'path';
 
 import {
   fetchShopifyProducts,
-  fetchChergProducts,
-  fetchMezhigProducts,
-  fetchRizhskaProducts,
-  fetchShchusevProducts,
-  fetchBrnProducts,
-  fetchBgdnProducts,
-  fetchEeeProducts,
   fetchAllSupplierProducts,
   mergeSupplierData,
   logMergedProductsStats,
@@ -20,7 +13,6 @@ import {
   convertProductsToJsonLines,
   startBulkUpdate,
 } from './utils/index';
-import { Supplier } from './types';
 
 const writeFileAsync = promisify(fs.writeFile);
 
@@ -37,19 +29,8 @@ export const registerIpcHandlers = (): void => {
       sendProgressUpdate('Fetching products from Shopify', 5);
       const shopifyProducts = await fetchShopifyProducts();
 
-      sendProgressUpdate('Preparing suppliers list', 10);
-      const suppliers: Supplier[] = [
-        { name: 'ЧЕ', fetchFunction: fetchChergProducts },
-        { name: 'МЕ', fetchFunction: fetchMezhigProducts },
-        { name: 'РИ', fetchFunction: fetchRizhskaProducts },
-        { name: 'ЩУ', fetchFunction: fetchShchusevProducts },
-        { name: 'Б', fetchFunction: fetchBrnProducts },
-        { name: 'Бо', fetchFunction: fetchBgdnProducts },
-        { name: 'ИИ', fetchFunction: fetchEeeProducts },
-      ];
-
       sendProgressUpdate('Fetching products from suppliers', 15);
-      const allSupplierProducts = await fetchAllSupplierProducts(suppliers);
+      const allSupplierProducts = await fetchAllSupplierProducts();
 
       sendProgressUpdate('Merging product data', 40);
       const step1MergedProducts = mergeSupplierData(

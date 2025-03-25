@@ -6,6 +6,7 @@ export interface ShopifyProduct {
   custom_hotline_href: string;
   custom_product_number_1_sku: string;
   custom_alternative_part_number: string;
+  custom_competitor_minimum_price: string;
 }
 
 export interface ShopifyResponse {
@@ -32,6 +33,9 @@ export interface ShopifyResponse {
           custom_alternative_part_number: {
             value: string;
           };
+          custom_competitor_minimum_price: {
+            value: string;
+          };
         };
       }[];
       pageInfo: {
@@ -55,12 +59,14 @@ export interface SupplierProduct {
   instock: number;
   priceOpt: number;
   priceRtl?: number;
+  normalizedPrice?: number;
   supplierName?: string;
 }
 
 export interface Supplier {
   name: string;
   fetchFunction: () => Promise<SupplierProduct[]>;
+  priceNormalizationFactor?: number;
 }
 
 export interface Offer {
