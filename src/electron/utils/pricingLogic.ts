@@ -335,7 +335,7 @@ export const convertProductsToJsonLines = (
           {
             namespace: 'custom',
             key: 'warranty',
-            value: product.bestSupplier?.warranty || '',
+            value: String(product.bestSupplier?.warranty || ''),
             type: 'single_line_text_field',
           },
         ],

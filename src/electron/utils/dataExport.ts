@@ -1,5 +1,4 @@
 import ExcelJS from 'exceljs';
-import path from 'path';
 import { ExtendedShopifyProduct } from '../types';
 
 export const writeExtendedProductsToFile = async (
@@ -27,7 +26,7 @@ export const writeExtendedProductsToFile = async (
     { header: 'Rtl Price', key: 'bestSupplierRtlPrice', width: 15 },
     { header: 'Stock', key: 'bestSupplierStock', width: 8 },
     { header: 'Warranty', key: 'bestSupplierWarranty', width: 8 },
-    { header: 'Hotline Price', key: 'hotlineMinimalPrice', width: 15 },
+    { header: 'Hotline Price', key: 'minimalHotlinePrice', width: 15 },
     { header: 'Min Final Price', key: 'minimalFinalPrice', width: 15 },
     { header: 'Middle Final Price', key: 'middleFinalPrice', width: 15 },
     { header: 'Max Final Price', key: 'maximalFinalPrice', width: 15 },
@@ -48,7 +47,7 @@ export const writeExtendedProductsToFile = async (
       bestSupplierRtlPrice: product.bestSupplier?.priceRtl,
       bestSupplierStock: product.bestSupplier?.instock,
       bestSupplierWarranty: product.bestSupplier?.warranty,
-      hotlineMinimalPrice: product.hotlineMinimalPrice,
+      minimalHotlinePrice: product.minimalHotlinePrice,
       minimalFinalPrice: product.minimalFinalPrice,
       middleFinalPrice: product.middleFinalPrice,
       maximalFinalPrice: product.maximalFinalPrice,
