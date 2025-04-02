@@ -139,7 +139,8 @@ export function logMergedProductsStats(
   const supplierStats: Record<string, number> = {};
 
   extendedProducts.forEach((product) => {
-    const supplierName = product.bestSupplierName;
+    const supplierName = product.bestSupplier?.supplierName || '';
+    //const supplierName = product.bestSupplierName;
     if (!supplierStats[supplierName]) {
       supplierStats[supplierName] = 0;
     }
@@ -179,7 +180,7 @@ export const mergeSupplierData = (
         ...product,
         suppliers,
         bestSupplier,
-        bestSupplierName: bestSupplier ? bestSupplier.supplierName : null,
+        //bestSupplierName: bestSupplier ? bestSupplier.supplierName : null,
       };
     }
   );

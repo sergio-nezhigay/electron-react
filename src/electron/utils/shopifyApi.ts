@@ -88,7 +88,7 @@ export const fetchShopifyProducts = async (): Promise<ShopifyProduct[]> => {
       });
       allProducts.push(...extractProducts(data));
       console.log(`Fetched ${allProducts.length} products from Shopify`);
-      // hasNextPage = false;
+      //hasNextPage = false;
       hasNextPage = data.data?.products.pageInfo.hasNextPage || false;
       endCursor = data.data?.products.pageInfo.endCursor || null;
     } catch (error) {

@@ -42,7 +42,7 @@ export const writeExtendedProductsToFile = async (
       custom_hotline_href: product.custom_hotline_href,
       custom_product_number_1_sku: product.custom_product_number_1_sku,
       custom_alternative_part_number: product.custom_alternative_part_number,
-      bestSupplierName: product.bestSupplierName,
+      bestSupplierName: product.bestSupplier?.supplierName || '',
       bestSupplierOptPrice: product.bestSupplier?.priceOpt,
       bestSupplierRtlPrice: product.bestSupplier?.priceRtl,
       bestSupplierStock: product.bestSupplier?.instock,
